@@ -29,7 +29,7 @@
 #include <algorithm>
 #include <cassert>
 
-#include <MemMesurer.hpp>
+#include <MemMeasurer.hpp>
 #include <Types.hpp>
 
 struct TestResult {
@@ -77,13 +77,13 @@ struct Insert : TestBase<TYPE> {
 		assert(m_Set.size() == 0);
 	}
 
-	TestResult test(MemMesurer& mem_mesurer) __attribute_noinline__
+	TestResult test(MemMeasurer& mem_measurer) __attribute_noinline__
 	{
 		size_t inserted = 0;
 		for (size_t i = 0; i < SIZE; i++) {
 			inserted += m_Set.insert(this->m_Data[i]);
 			if (i % 1024 == 0)
-				mem_mesurer.probe();
+				mem_measurer.probe();
 		}
 		assert(inserted == m_Set.size());
 		return TestResult{SIZE, inserted};
@@ -117,14 +117,14 @@ struct Delete : TestBase<TYPE> {
 			m_Set.insert(this->m_Data[i]);
 	}
 
-	TestResult test(MemMesurer& mem_mesurer) __attribute_noinline__
+	TestResult test(MemMeasurer& mem_measurer) __attribute_noinline__
 	{
 		size_t deteted = 0;
 		size_t was_size = m_Set.size();
 		for (size_t i = 0; i < SIZE; i++) {
 			deteted += m_Set.remove(this->m_Data[i]);
 			if (i % 1024 == 0)
-				mem_mesurer.probe();
+				mem_measurer.probe();
 		}
 		assert(deteted == was_size); (void)was_size;
 		return TestResult{SIZE, deteted};
@@ -157,13 +157,13 @@ struct SearchHit : TestBase<TYPE> {
 	{
 	}
 
-	TestResult test(MemMesurer& mem_mesurer) __attribute_noinline__
+	TestResult test(MemMeasurer& mem_measurer) __attribute_noinline__
 	{
 		size_t res = 0;
 		for (size_t i = 0; i < SIZE; i++) {
 			res += m_Set.has(this->m_Data[i]);
 			if (i % 1024 == 0)
-				mem_mesurer.probe();
+				mem_measurer.probe();
 		}
 		assert(res == SIZE);
 		return TestResult{SIZE, res};
@@ -195,13 +195,13 @@ struct SearchMiss : TestBase<TYPE> {
 	{
 	}
 
-	TestResult test(MemMesurer& mem_mesurer) __attribute_noinline__
+	TestResult test(MemMeasurer& mem_measurer) __attribute_noinline__
 	{
 		size_t res = 0;
 		for (size_t i = SIZE; i < SIZE * 2; i++) {
 			res += m_Set.has(this->m_Data[i]);
 			if (i % 1024 == 0)
-				mem_mesurer.probe();
+				mem_measurer.probe();
 		}
 		return TestResult{SIZE, res};
 	}
@@ -232,13 +232,13 @@ struct SearchMixed : TestBase<TYPE> {
 	{
 	}
 
-	TestResult test(MemMesurer& mem_mesurer) __attribute_noinline__
+	TestResult test(MemMeasurer& mem_measurer) __attribute_noinline__
 	{
 		size_t res = 0;
 		for (size_t i = 0; i < this->m_DataSize; i++) {
 			res += m_Set.has(this->m_Data[i]);
 			if (i % 1024 == 0)
-				mem_mesurer.probe();
+				mem_measurer.probe();
 		}
 		return TestResult{this->m_DataSize, res};
 	}
@@ -270,7 +270,7 @@ struct RandWorkload : TestBase<TYPE> {
 			m_Set.insert(this->m_Data[i]);
 	}
 
-	TestResult test(MemMesurer& mem_mesurer) __attribute_noinline__
+	TestResult test(MemMeasurer& mem_measurer) __attribute_noinline__
 	{
 		for (size_t i = SIZE; i < this->m_DataSize; i++) {
 			if (m_Set.has(this->m_Data[i]))
@@ -278,7 +278,7 @@ struct RandWorkload : TestBase<TYPE> {
 			else
 				m_Set.insert(this->m_Data[i]);
 			if (i % 1024 == 0)
-				mem_mesurer.probe();
+				mem_measurer.probe();
 		}
 		return TestResult{this->m_DataSize - SIZE, m_Set.size()};
 	}

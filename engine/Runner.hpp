@@ -31,54 +31,49 @@
 #include <cstddef>
 #include <utility>
 
-#include <MemMesurer.hpp>
+#include <MemMeasurer.hpp>
 #include <Reporter.hpp>
 #include <Types.hpp>
 #include <Timer.hpp>
 
 namespace {
+
 template<size_t I, class SEQUENCE>
-struct getter;
+struct sequence_element;
 
 template<size_t I, size_t... SEQUENCE>
-struct getter<I, std::index_sequence<SEQUENCE...>> {
+struct sequence_element<I, std::index_sequence<SEQUENCE...>> {
 	static constexpr size_t arr[] = {SEQUENCE...};
 	static constexpr size_t value = arr[I];
 };
 
+template<size_t I, class SEQUENCE>
+constexpr size_t sequence_element_v = sequence_element<I, SEQUENCE>::value;
+
 template<class SEQUENCE>
-struct sizer;
+struct sequence_size;
 
 template<size_t... SEQUENCE>
-struct sizer<std::index_sequence<SEQUENCE...>> {
+struct sequence_size<std::index_sequence<SEQUENCE...>> {
 	static constexpr size_t value = sizeof ... (SEQUENCE);
 };
 
-}
+template<class SEQUENCE>
+constexpr size_t sequence_size_v = sequence_size<SEQUENCE>::value;
 
-inline double mem_used()
-{
-	return mallinfo().uordblks / 1024. / 1024.;
-}
+} // anonymous namespace
 
-template <class SIZES, class TYPES,
-	template <typename TYPE> class STRUCTS,
-	template <size_t SIZE, typename  TYPE, typename STRUCT> class TESTS>
+template <class SIZES, class TYPES, template <typename TYPE> class STRUCTS,
+	template <size_t SIZE, typename TYPE, typename STRUCT> class TESTS>
 struct AllTests {
-	using sizes_t = SIZES;
-	using types_t = TYPES;
-	template <typename TYPE>
-	using structs_t = STRUCTS<TYPE>;
-	template <size_t SIZE, typename  TYPE, typename STRUCT>
-	using tests_t = TESTS<SIZE, TYPE, STRUCT>;
 
-	static constexpr size_t size0 = getter<0, sizes_t>::value;
-	using type0 = std::tuple_element_t<0, types_t>;
-	using struct0 = std::tuple_element_t<0, structs_t<type0>>;
-	static constexpr size_t sizes_size = sizer<sizes_t>::value;
-	static constexpr size_t types_size = std::tuple_size_v<types_t>;
-	static constexpr size_t structs_size = std::tuple_size_v<structs_t<type0>>;
-	static constexpr size_t tests_size = std::tuple_size_v<tests_t<size0, type0, struct0>>;
+	static constexpr size_t size0 = sequence_element_v<0, SIZES>;
+	using type0 = std::tuple_element_t<0, TYPES>;
+	using struct0 = std::tuple_element_t<0, STRUCTS<type0>>;
+	static constexpr size_t sizes_size = sequence_size_v<SIZES>;
+	static constexpr size_t types_size = std::tuple_size_v<TYPES>;
+	static constexpr size_t structs_size = std::tuple_size_v<STRUCTS<type0>>;
+	static constexpr size_t tests_size = std::tuple_size_v<TESTS<size0, type0, struct0>>;
 
 	static constexpr size_t size()
 	{
@@ -100,10 +95,10 @@ struct AllTests {
 		static_assert(MORE3 < sizes_size, "wrong index caclulation");
 		static constexpr size_t SIZE_I = MORE3;
 
-		static constexpr size_t size = getter<SIZE_I, sizes_t>::value;
-		using type_t = std::tuple_element_t<TYPE_I, types_t>;
-		using struct_t = std::tuple_element_t<STRUCT_I, structs_t<type_t>>;
-		using test_t = std::tuple_element_t<TEST_I, tests_t<size, type_t, struct_t>>;
+		static constexpr size_t size = sequence_element_v<SIZE_I, SIZES>;
+		using type_t = std::tuple_element_t<TYPE_I, TYPES>;
+		using struct_t = std::tuple_element_t<STRUCT_I, STRUCTS<type_t>>;
+		using test_t = std::tuple_element_t<TEST_I, TESTS<size, type_t, struct_t>>;
 	};
 
 	template <class ONE_TEST>
@@ -114,7 +109,7 @@ struct AllTests {
 		using struct_t = typename ONE_TEST::struct_t;
 		using test_t = typename ONE_TEST::test_t;
 
-		MemMesurer mem_mesurer;
+		MemMeasurer mem_measurer;
 		double bestMrps = 0;
 		size_t side_effect = 0;
 		{
@@ -124,20 +119,20 @@ struct AllTests {
 			for (size_t i = 0; i < rounds; i++) {
 				test.prepare();
 				Timer tm;
-				mem_mesurer.probe();
+				mem_measurer.probe();
 				tm.start();
-				auto res = test.test(mem_mesurer);
+				auto res = test.test(mem_measurer);
 				tm.stop();
-				mem_mesurer.probe();
+				mem_measurer.probe();
 				test.cleanup();
 				bestMrps = std::max(bestMrps,
 						    tm.Mrps(res.op_count));
 				side_effect = res.side_effect;
 			}
 		}
-		double MB_used = mem_mesurer.maxUsage() / 1024 / 1024;
-		double bytes_per_record = mem_mesurer.maxUsage() / size;
-		double MB_leak = mem_mesurer.leak() / 1024 / 1024;
+		double MB_used = mem_measurer.maxUsage() / 1024 / 1024;
+		double bytes_per_record = mem_measurer.maxUsage() / size;
+		double MB_leak = mem_measurer.leak() / 1024 / 1024;
 
 		reporter.report(size, TypeTraits<type_t>::name, struct_t::family,
 				struct_t::name, test_t::name,
